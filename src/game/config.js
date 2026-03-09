@@ -1,19 +1,19 @@
-export const GRID = {
+const GRID = {
   cols: 24,
   rows: 16,
   tileSize: 40,
 };
 
-export const RESOURCE_TYPES = ['salvage', 'wood', 'ore', 'crystal'];
+const RESOURCE_TYPES = ['salvage', 'wood', 'ore', 'crystal'];
 
-export const RESOURCE_COLORS = {
+const RESOURCE_COLORS = {
   salvage: '#fbbf24',
   wood: '#22c55e',
   ore: '#94a3b8',
   crystal: '#a78bfa',
 };
 
-export const BUILD_TYPES = {
+const BUILD_TYPES = {
   arrow: {
     category: 'tower',
     name: 'Arrow Tower',
@@ -49,16 +49,25 @@ export const BUILD_TYPES = {
   },
 };
 
-export const WORKER_CONFIG = {
+const WORKER_CONFIG = {
   cost: { salvage: 20 },
   speed: 70,
   gatherDuration: 2.2,
   carryAmount: 12,
 };
 
-export const ENEMY_WAVE = {
+const ENEMY_WAVE = {
   baseCount: 7,
   healthScale: 0.28,
   speedBase: 54,
   salvageBounty: 12,
+};
+
+window.GameConfig = {
+  GRID,
+  RESOURCE_TYPES,
+  RESOURCE_COLORS,
+  BUILD_TYPES,
+  WORKER_CONFIG,
+  ENEMY_WAVE,
 };

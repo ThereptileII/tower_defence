@@ -1,7 +1,7 @@
-import { BUILD_TYPES, ENEMY_WAVE, GRID, RESOURCE_TYPES, WORKER_CONFIG } from './game/config.js';
-import { Tower, Worker, WorkerStation, generateWave } from './game/entities.js';
-import { createMap, findPath } from './game/map.js';
-import { render } from './game/renderer.js';
+const { BUILD_TYPES, ENEMY_WAVE, GRID, RESOURCE_TYPES, WORKER_CONFIG } = window.GameConfig;
+const { Tower, Worker, WorkerStation, generateWave } = window.GameEntities;
+const { createMap, findPath } = window.GameMap;
+const { render } = window.GameRenderer;
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
