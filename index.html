@@ -52,9 +52,13 @@
       const warningEl = document.getElementById('runtime-warning');
       if (location.protocol === 'file:' && warningEl) {
         warningEl.hidden = false;
-        warningEl.textContent = 'The game was opened from file:// and some browsers block module scripts in this mode. Run a local server (for example: python3 -m http.server 4173) and open http://localhost:4173.';
+        warningEl.textContent = 'Running directly from file:// is supported in modern browsers.';
       }
     </script>
-    <script type="module" src="src/main.js"></script>
+    <script src="src/game/config.js"></script>
+    <script src="src/game/map.js"></script>
+    <script src="src/game/entities.js"></script>
+    <script src="src/game/renderer.js"></script>
+    <script src="src/main.js"></script>
   </body>
 </html>

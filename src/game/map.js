@@ -1,4 +1,4 @@
-import { GRID } from './config.js';
+const { GRID } = window.GameConfig;
 
 const roadLayout = [
   [0, 7],
@@ -27,14 +27,14 @@ function toWorld([col, row]) {
   };
 }
 
-export function tileToWorld(col, row) {
+function tileToWorld(col, row) {
   return {
     x: col * GRID.tileSize + GRID.tileSize / 2,
     y: row * GRID.tileSize + GRID.tileSize / 2,
   };
 }
 
-export function createMap() {
+function createMap() {
   const pathPoints = roadLayout.map(toWorld);
   const pathTiles = new Set();
 
@@ -62,7 +62,7 @@ export function createMap() {
   };
 }
 
-export function findPath(start, goal, blockedSet) {
+function findPath(start, goal, blockedSet) {
   const startKey = `${start.col},${start.row}`;
   const goalKey = `${goal.col},${goal.row}`;
   if (startKey === goalKey) return [start];
@@ -103,3 +103,9 @@ export function findPath(start, goal, blockedSet) {
 
   return [];
 }
+
+window.GameMap = {
+  tileToWorld,
+  createMap,
+  findPath,
+};

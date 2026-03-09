@@ -1,7 +1,7 @@
-import { ENEMY_WAVE, GRID, WORKER_CONFIG } from './config.js';
-import { tileToWorld } from './map.js';
+const { ENEMY_WAVE, GRID, WORKER_CONFIG } = window.GameConfig;
+const { tileToWorld } = window.GameMap;
 
-export class Enemy {
+class Enemy {
   constructor(pathPoints, health, speed) {
     this.pathPoints = pathPoints;
     this.health = health;
@@ -35,7 +35,7 @@ export class Enemy {
   }
 }
 
-export class Tower {
+class Tower {
   constructor(col, row, def) {
     this.col = col;
     this.row = row;
@@ -68,7 +68,7 @@ export class Tower {
   }
 }
 
-export class WorkerStation {
+class WorkerStation {
   constructor(id, col, row, def) {
     this.id = id;
     this.col = col;
@@ -77,7 +77,7 @@ export class WorkerStation {
   }
 }
 
-export class Worker {
+class Worker {
   constructor(station, targetNode, pathToNode) {
     this.homeStationId = station.id;
     this.col = station.col;
@@ -150,7 +150,7 @@ export class Worker {
   }
 }
 
-export function generateWave(waveNumber, pathPoints) {
+function generateWave(waveNumber, pathPoints) {
   const enemyCount = ENEMY_WAVE.baseCount + waveNumber * 2;
   const hp = 50 * (1 + waveNumber * ENEMY_WAVE.healthScale);
   const speed = ENEMY_WAVE.speedBase + waveNumber * 3;
@@ -159,3 +159,11 @@ export function generateWave(waveNumber, pathPoints) {
     enemy: new Enemy(pathPoints, hp, speed),
   }));
 }
+
+window.GameEntities = {
+  Enemy,
+  Tower,
+  WorkerStation,
+  Worker,
+  generateWave,
+};

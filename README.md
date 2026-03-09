@@ -3,13 +3,7 @@
 Browser-based tower defence prototype with lane defense plus worker logistics.
 
 ## Run locally
-```bash
-python3 -m http.server 4173
-```
-
-Open `http://localhost:4173`.
-
-> Note: opening `index.html` directly via `file://` can prevent JavaScript modules from loading in some browsers, which leaves the UI mostly blank.
+Open `index.html` directly in your browser. No Python or local web server is required.
 
 ## Gameplay
 - Build towers and worker stations (stations can share tiles with towers).

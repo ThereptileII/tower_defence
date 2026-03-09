@@ -1,4 +1,4 @@
-import { GRID, RESOURCE_COLORS } from './config.js';
+const { GRID, RESOURCE_COLORS } = window.GameConfig;
 
 function tileOrigin(col, row) {
   return { x: col * GRID.tileSize, y: row * GRID.tileSize };
@@ -189,7 +189,7 @@ function drawStation(ctx, station, selectedStationId) {
   ctx.lineWidth = 1;
 }
 
-export function render(ctx, state) {
+function render(ctx, state) {
   const { map, towers, stations, workers, enemies, projectiles, selectedBuild, hoverTile, selectedStationId } = state;
   ctx.clearRect(0, 0, GRID.cols * GRID.tileSize, GRID.rows * GRID.tileSize);
   drawTerrain(ctx);
@@ -252,3 +252,6 @@ export function render(ctx, state) {
     ctx.strokeRect(x + 1, y + 1, GRID.tileSize - 2, GRID.tileSize - 2);
   }
 }
+
+
+window.GameRenderer = { render };
