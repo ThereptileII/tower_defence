@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frontier Bastion - Tower Defence Prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1>Frontier Bastion</h1>
+        <p class="subtitle">Classic tower defence with workers and multi-resource economy.</p>
+
+        <section>
+          <h2>Build</h2>
+          <div class="button-row">
+            <button data-build="arrow"></button>
+            <button data-build="cannon"></button>
+            <button data-build="arcane"></button>
+            <button data-build="station"></button>
+          </div>
+          <button id="build-none" class="secondary">Cancel Build</button>
+        </section>
+
+        <section>
+          <h2>Workers</h2>
+          <p id="selected-station">Selected station: none</p>
+          <button id="build-worker"></button>
+          <p class="hint">Tip: click a station tile to select it, then build workers.</p>
+        </section>
+
+        <section>
+          <h2>Wave Control</h2>
+          <button id="send-wave">Start Next Wave</button>
+          <label class="speed-toggle"><input id="fast-mode" type="checkbox" /> Fast mode x2</label>
+        </section>
+
+        <section>
+          <h2>Status</h2>
+          <ul id="hud" class="hud"></ul>
+        </section>
+      </aside>
+
+      <main>
+        <canvas id="game-canvas" width="960" height="640" aria-label="Tower defence field"></canvas>
+      </main>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
