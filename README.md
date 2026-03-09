@@ -9,6 +9,8 @@ python3 -m http.server 4173
 
 Open `http://localhost:4173`.
 
+> Note: opening `index.html` directly via `file://` can prevent JavaScript modules from loading in some browsers, which leaves the UI mostly blank.
+
 ## Gameplay
 - Build towers and worker stations (stations can share tiles with towers).
 - Select a worker station by clicking it, then train workers.
