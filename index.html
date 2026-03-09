@@ -11,14 +11,15 @@
       <aside class="sidebar">
         <h1>Frontier Bastion</h1>
         <p class="subtitle">Classic tower defence with workers and multi-resource economy.</p>
+        <p id="runtime-warning" class="runtime-warning" hidden></p>
 
         <section>
           <h2>Build</h2>
           <div class="button-row">
-            <button data-build="arrow"></button>
-            <button data-build="cannon"></button>
-            <button data-build="arcane"></button>
-            <button data-build="station"></button>
+            <button data-build="arrow">Arrow Tower (salvage:60)</button>
+            <button data-build="cannon">Cannon Tower (salvage:45 wood:20 ore:25)</button>
+            <button data-build="arcane">Arcane Spire (salvage:35 ore:15 crystal:30)</button>
+            <button data-build="station">Worker Station (salvage:80 wood:15)</button>
           </div>
           <button id="build-none" class="secondary">Cancel Build</button>
         </section>
@@ -26,7 +27,7 @@
         <section>
           <h2>Workers</h2>
           <p id="selected-station">Selected station: none</p>
-          <button id="build-worker"></button>
+          <button id="build-worker">Build Worker (salvage:20)</button>
           <p class="hint">Tip: click a station tile to select it, then build workers.</p>
         </section>
 
@@ -47,6 +48,13 @@
       </main>
     </div>
 
+    <script>
+      const warningEl = document.getElementById('runtime-warning');
+      if (location.protocol === 'file:' && warningEl) {
+        warningEl.hidden = false;
+        warningEl.textContent = 'The game was opened from file:// and some browsers block module scripts in this mode. Run a local server (for example: python3 -m http.server 4173) and open http://localhost:4173.';
+      }
+    </script>
     <script type="module" src="src/main.js"></script>
   </body>
 </html>
