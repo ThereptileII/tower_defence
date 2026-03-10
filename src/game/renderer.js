@@ -1,54 +1,48 @@
-const { GRID, RESOURCE_COLORS } = window.GameConfig;
-
-function tileOrigin(col, row) {
-  return { x: col * GRID.tileSize, y: row * GRID.tileSize };
-}
+import { GRID, RESOURCE_COLORS } from './config.js';
 
 function drawTerrain(ctx) {
   const width = GRID.cols * GRID.tileSize;
   const height = GRID.rows * GRID.tileSize;
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-  bgGradient.addColorStop(0, '#3c6e3c');
-  bgGradient.addColorStop(1, '#294f2a');
-  ctx.fillStyle = bgGradient;
+
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, '#37562f');
+  gradient.addColorStop(1, '#223820');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
-
-  for (let row = 0; row < GRID.rows; row += 1) {
-    for (let col = 0; col < GRID.cols; col += 1) {
-      const { x, y } = tileOrigin(col, row);
-      const shade = (col * 17 + row * 23) % 28;
-      ctx.fillStyle = `rgba(173, 201, 119, ${0.04 + shade / 600})`;
-      ctx.fillRect(x, y, GRID.tileSize, GRID.tileSize);
-    }
-  }
-}
-
-function drawGrid(ctx) {
-  ctx.strokeStyle = 'rgba(27, 55, 29, 0.35)';
-  for (let x = 0; x <= GRID.cols; x += 1) {
-    ctx.beginPath();
-    ctx.moveTo(x * GRID.tileSize, 0);
-    ctx.lineTo(x * GRID.tileSize, GRID.rows * GRID.tileSize);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= GRID.rows; y += 1) {
-    ctx.beginPath();
-    ctx.moveTo(0, y * GRID.tileSize);
-    ctx.lineTo(GRID.cols * GRID.tileSize, y * GRID.tileSize);
-    ctx.stroke();
-  }
 }
 
 function drawPath(ctx, map) {
-  for (const key of map.pathTiles) {
-    const [col, row] = key.split(',').map(Number);
-    const { x, y } = tileOrigin(col, row);
-    ctx.fillStyle = '#9f7a4a';
-    ctx.fillRect(x, y, GRID.tileSize, GRID.tileSize);
-    ctx.fillStyle = 'rgba(79, 53, 27, 0.22)';
-    ctx.fillRect(x + 2, y + 2, GRID.tileSize - 4, GRID.tileSize - 4);
-    ctx.strokeStyle = 'rgba(66, 46, 24, 0.45)';
-    ctx.strokeRect(x + 0.5, y + 0.5, GRID.tileSize - 1, GRID.tileSize - 1);
+  ctx.strokeStyle = '#927045';
+  ctx.lineWidth = GRID.tileSize - 8;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  map.pathPoints.forEach((point, index) => {
+    if (index === 0) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
+  });
+  ctx.stroke();
+
+  ctx.strokeStyle = '#b99462';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.lineWidth = 1;
+}
+
+function drawGrid(ctx) {
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.18)';
+  for (let col = 0; col <= GRID.cols; col += 1) {
+    const x = col * GRID.tileSize;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, GRID.rows * GRID.tileSize);
+    ctx.stroke();
+  }
+  for (let row = 0; row <= GRID.rows; row += 1) {
+    const y = row * GRID.tileSize;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(GRID.cols * GRID.tileSize, y);
+    ctx.stroke();
   }
 }
 
@@ -56,65 +50,12 @@ function drawResources(ctx, map) {
   for (const node of map.resourceNodes) {
     const x = node.col * GRID.tileSize + GRID.tileSize / 2;
     const y = node.row * GRID.tileSize + GRID.tileSize / 2;
-
-    const patch = ctx.createRadialGradient(x - 2, y - 2, 2, x, y, 18);
-    patch.addColorStop(0, 'rgba(210, 190, 152, 0.7)');
-    patch.addColorStop(1, 'rgba(64, 43, 24, 0.7)');
-    ctx.fillStyle = patch;
+    ctx.fillStyle = RESOURCE_COLORS[node.type];
     ctx.beginPath();
-    ctx.arc(x, y, 17, 0, Math.PI * 2);
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
     ctx.fill();
-
-    if (node.type === 'wood') {
-      ctx.fillStyle = '#365f2f';
-      ctx.beginPath();
-      ctx.arc(x - 5, y + 1, 6, 0, Math.PI * 2);
-      ctx.arc(x + 2, y - 3, 7, 0, Math.PI * 2);
-      ctx.arc(x + 7, y + 3, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#4b3621';
-      ctx.fillRect(x - 1.5, y + 4, 3, 7);
-    }
-
-    if (node.type === 'ore') {
-      ctx.fillStyle = '#9ca3af';
-      ctx.beginPath();
-      ctx.moveTo(x - 8, y + 5);
-      ctx.lineTo(x - 3, y - 7);
-      ctx.lineTo(x + 2, y + 4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(x - 1, y + 7);
-      ctx.lineTo(x + 5, y - 6);
-      ctx.lineTo(x + 9, y + 5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.stroke();
-    }
-
-    if (node.type === 'crystal') {
-      ctx.fillStyle = '#8b5cf6';
-      ctx.beginPath();
-      ctx.moveTo(x, y - 10);
-      ctx.lineTo(x + 6, y - 1);
-      ctx.lineTo(x + 2, y + 9);
-      ctx.lineTo(x - 4, y + 2);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#c4b5fd';
-      ctx.beginPath();
-      ctx.moveTo(x + 1, y - 7);
-      ctx.lineTo(x + 3.2, y - 2);
-      ctx.lineTo(x, y + 3);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    ctx.strokeStyle = RESOURCE_COLORS[node.type];
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - 15, y - 15, 30, 30);
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
+    ctx.stroke();
   }
 }
 
@@ -189,7 +130,7 @@ function drawStation(ctx, station, selectedStationId) {
   ctx.lineWidth = 1;
 }
 
-function render(ctx, state) {
+export function render(ctx, state) {
   const { map, towers, stations, workers, enemies, projectiles, selectedBuild, hoverTile, selectedStationId } = state;
   ctx.clearRect(0, 0, GRID.cols * GRID.tileSize, GRID.rows * GRID.tileSize);
   drawTerrain(ctx);
@@ -252,6 +193,3 @@ function render(ctx, state) {
     ctx.strokeRect(x + 1, y + 1, GRID.tileSize - 2, GRID.tileSize - 2);
   }
 }
-
-
-window.GameRenderer = { render };

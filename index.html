@@ -4,77 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Frontier Bastion - Tower Defence Prototype</title>
-    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="layout">
-      <aside class="sidebar">
-        <h1>Frontier Bastion</h1>
-        <p class="subtitle">Classic tower defence with workers and multi-resource economy.</p>
-        <p id="runtime-warning" class="runtime-warning" hidden></p>
-
-        <section>
-          <h2>Build</h2>
-          <div class="button-row">
-            <button data-build="arrow">Arrow Tower (salvage:60)</button>
-            <button data-build="cannon">Cannon Tower (salvage:45 wood:20 ore:25)</button>
-            <button data-build="arcane">Arcane Spire (salvage:35 ore:15 crystal:30)</button>
-            <button data-build="station">Worker Station (salvage:80 wood:15)</button>
-          </div>
-          <button id="build-none" class="secondary">Cancel Build</button>
-        </section>
-
-        <section>
-          <h2>Workers</h2>
-          <p id="selected-station">Selected station: none</p>
-          <button id="build-worker">Build Worker (salvage:20)</button>
-          <p class="hint">Tip: click a station tile to select it, then build workers.</p>
-        </section>
-
-        <section>
-          <h2>Wave Control</h2>
-          <button id="send-wave">Start Next Wave</button>
-          <label class="speed-toggle"><input id="fast-mode" type="checkbox" /> Fast mode x2</label>
-        </section>
-
-        <section>
-          <h2>Status</h2>
-          <ul id="hud" class="hud"></ul>
-        </section>
-      </aside>
-
-      <main>
-        <canvas id="game-canvas" width="960" height="640" aria-label="Tower defence field"></canvas>
-      </main>
-    </div>
-
-    <script src="src/game/config.js"></script>
-    <script src="src/game/map.js"></script>
-    <script src="src/game/entities.js"></script>
-    <script src="src/game/renderer.js"></script>
-    <script src="src/main.js"></script>
-    <script>
-      (function () {
-        const warningEl = document.getElementById('runtime-warning');
-        if (!warningEl) return;
-
-        function showRuntimeWarning(message) {
-          warningEl.hidden = false;
-          warningEl.textContent = message;
-        }
-
-        const hasRuntime = Boolean(window.GameConfig && window.GameMap && window.GameEntities && window.GameRenderer);
-        if (hasRuntime) {
-          return;
-        }
-
-        if (location.protocol === 'file:') {
-          showRuntimeWarning('Your browser blocked local script files, so the game could not start from file://. Try Chrome/Edge/Firefox or run: python -m http.server');
-          return;
-        }
-
-        showRuntimeWarning('Game scripts failed to load. Please refresh and check that all files under src/ are present.');
-      })();
-    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
