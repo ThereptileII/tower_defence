@@ -1,4 +1,44 @@
-import { GRID, RESOURCE_COLORS } from './config.js';
+import { BUILD_TYPES, GRID, RESOURCE_COLORS } from './config.js';
+import salvageIcon from '../assets/icons/resource-salvage.svg';
+import woodIcon from '../assets/icons/resource-wood.svg';
+import oreIcon from '../assets/icons/resource-ore.svg';
+import crystalIcon from '../assets/icons/resource-crystal.svg';
+import arrowTowerIcon from '../assets/icons/tower-arrow.svg';
+import cannonTowerIcon from '../assets/icons/tower-cannon.svg';
+import arcaneTowerIcon from '../assets/icons/tower-arcane.svg';
+
+
+const resourceIconUrls = {
+  salvage: salvageIcon,
+  wood: woodIcon,
+  ore: oreIcon,
+  crystal: crystalIcon,
+};
+
+const towerIconUrls = {
+  arrow: arrowTowerIcon,
+  cannon: cannonTowerIcon,
+  arcane: arcaneTowerIcon,
+};
+
+const imageCache = new Map();
+
+function getImage(url) {
+  if (!imageCache.has(url)) {
+    const image = new Image();
+    image.src = url;
+    imageCache.set(url, image);
+  }
+  return imageCache.get(url);
+}
+
+function drawIcon(ctx, url, x, y, size) {
+  if (!url) return;
+  const image = getImage(url);
+  if (image.complete && image.naturalWidth > 0) {
+    ctx.drawImage(image, x - size / 2, y - size / 2, size, size);
+  }
+}
 
 function drawTerrain(ctx) {
   const width = GRID.cols * GRID.tileSize;
@@ -26,6 +66,7 @@ function drawPath(ctx, map) {
   ctx.lineWidth = 6;
   ctx.stroke();
   ctx.lineWidth = 1;
+
 }
 
 function drawGrid(ctx) {
@@ -56,10 +97,11 @@ function drawResources(ctx, map) {
     ctx.fill();
     ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
     ctx.stroke();
+    drawIcon(ctx, resourceIconUrls[node.type], x, y, 24);
   }
 }
 
-function drawTower(ctx, tower) {
+function drawTower(ctx, tower, selectedTowerTile) {
   const x = tower.col * GRID.tileSize + 5;
   const y = tower.row * GRID.tileSize + 5;
   const w = GRID.tileSize - 10;
@@ -88,11 +130,27 @@ function drawTower(ctx, tower) {
   ctx.fillRect(x + w / 2 - 2, y + 12, 4, 10);
   ctx.fillStyle = tower.def.color;
   ctx.fillRect(x + w / 2 + 2, y + 12, 7, 3);
+  drawIcon(ctx, towerIconUrls[tower.kind], x + w / 2, y + 20, 16);
 
   ctx.strokeStyle = tower.def.color;
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y + 6, w, h - 6);
   ctx.lineWidth = 1;
+
+  if (tower.level > 1) {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+    ctx.fillRect(x + 2, y + 6, 18, 12);
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(`L${tower.level}`, x + 4, y + 15);
+  }
+
+  if (selectedTowerTile && selectedTowerTile.col === tower.col && selectedTowerTile.row === tower.row) {
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x - 2, y + 4, w + 4, h - 2);
+    ctx.lineWidth = 1;
+  }
 }
 
 function drawStation(ctx, station, selectedStationId) {
@@ -128,10 +186,11 @@ function drawStation(ctx, station, selectedStationId) {
   ctx.lineWidth = selectedStationId === station.id ? 3 : 1;
   ctx.strokeRect(x, y + 8, w, h - 8);
   ctx.lineWidth = 1;
+
 }
 
 export function render(ctx, state) {
-  const { map, towers, stations, workers, enemies, projectiles, selectedBuild, hoverTile, selectedStationId } = state;
+  const { map, towers, stations, workers, enemies, projectiles, selectedBuild, hoverTile, selectedStationId, selectedTowerTile, occupiedTowers, occupiedStations } = state;
   ctx.clearRect(0, 0, GRID.cols * GRID.tileSize, GRID.rows * GRID.tileSize);
   drawTerrain(ctx);
 
@@ -140,7 +199,7 @@ export function render(ctx, state) {
   drawResources(ctx, map);
 
   for (const tower of towers) {
-    drawTower(ctx, tower);
+    drawTower(ctx, tower, selectedTowerTile);
   }
 
   for (const station of stations) {
@@ -187,9 +246,24 @@ export function render(ctx, state) {
   if (selectedBuild && hoverTile) {
     const x = hoverTile.col * GRID.tileSize;
     const y = hoverTile.row * GRID.tileSize;
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.22)';
+    const buildDef = BUILD_TYPES[selectedBuild];
+    const key = `${hoverTile.col},${hoverTile.row}`;
+    const blocked = map.pathTiles.has(key) || occupiedTowers.has(key) || occupiedStations.has(key);
+
+    if (buildDef?.category === 'tower') {
+      const cx = x + GRID.tileSize / 2;
+      const cy = y + GRID.tileSize / 2;
+      ctx.fillStyle = blocked ? 'rgba(239, 68, 68, 0.13)' : 'rgba(125, 211, 252, 0.15)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, buildDef.range, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = blocked ? 'rgba(239, 68, 68, 0.6)' : 'rgba(125, 211, 252, 0.65)';
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = blocked ? 'rgba(239, 68, 68, 0.25)' : 'rgba(250, 204, 21, 0.22)';
     ctx.fillRect(x, y, GRID.tileSize, GRID.tileSize);
-    ctx.strokeStyle = 'rgba(234, 179, 8, 0.9)';
+    ctx.strokeStyle = blocked ? 'rgba(239, 68, 68, 0.92)' : 'rgba(234, 179, 8, 0.9)';
     ctx.strokeRect(x + 1, y + 1, GRID.tileSize - 2, GRID.tileSize - 2);
   }
 }
