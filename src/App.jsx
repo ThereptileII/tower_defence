@@ -69,6 +69,7 @@ export default function App() {
       selectedStationId: state.selectedStationId,
       selectedBuild: state.selectedBuild,
       fastMode: state.fastMode,
+      runtimeWarning: window.location.protocol === 'file:' ? 'You are running the source index.html directly. Use `npm run dev` for development or open `dist/index.html` after `npm run build` for the full single-file game.' : null,
     };
   }, [uiTick]);
 
@@ -230,6 +231,7 @@ export default function App() {
       <aside className="sidebar">
         <h1>Frontier Bastion</h1>
         <p className="subtitle">Classic tower defence with workers and multi-resource economy.</p>
+        {uiState.runtimeWarning ? <p className="runtime-warning">{uiState.runtimeWarning}</p> : null}
 
         <section>
           <h2>Build</h2>
@@ -277,6 +279,22 @@ export default function App() {
         </section>
 
         <section>
+          <h2>Quick Start</h2>
+          <button
+            type="button"
+            onClick={() => {
+              const state = stateRef.current;
+              const grants = { salvage: 220, wood: 90, ore: 90, crystal: 70 };
+              for (const [type, amount] of Object.entries(grants)) state.resources[type] += amount;
+              setUiTick((v) => v + 1);
+            }}
+          >
+            Claim Starter Cache
+          </button>
+          <p className="hint">Gets your first stations and mixed towers online faster.</p>
+        </section>
+
+        <section>
           <h2>Wave Control</h2>
           <button
             type="button"
@@ -318,6 +336,7 @@ export default function App() {
       </aside>
 
       <main>
+        <p className="hint">Build towers + stations, click a station, train workers, then launch waves.</p>
         <canvas
           ref={canvasRef}
           width="960"

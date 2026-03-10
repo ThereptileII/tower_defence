@@ -11,6 +11,8 @@ npm run dev
 
 This starts a Vite dev server for local iteration.
 
+> Note: project-root `index.html` is a Vite entry file, not a standalone app. If opened directly (`file://`) it now shows instructions instead of a blank screen.
+
 ## Build a single-file app (`index.html`)
 
 ```bash
@@ -32,4 +34,9 @@ See `docs/GAME_PLAN.md` for the mechanics and roadmap.
 ## GitHub workflow (build artifact)
 
 A CI workflow is included at `.github/workflows/build-single-file.yml`.
-On pushes and pull requests, it installs dependencies, runs `npm run build`, and uploads `dist/index.html` as an artifact named `tower-defence-single-page`.
+On pushes and pull requests, it installs dependencies, runs `npm run build`, and uploads `dist/frontier-bastion-standalone.html` as an artifact named `frontier-bastion-standalone`.
+
+## CI standalone artifact
+
+The GitHub Action `.github/workflows/build-single-file.yml` now publishes a dedicated standalone file: `frontier-bastion-standalone.html`.
+Download that artifact from the workflow run and open it directly in the browser (`file://`).
