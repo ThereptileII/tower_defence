@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frontier Bastion Standalone</title>
+    <style>
+      :root { color-scheme: dark; --bg:#1c160f; --panel:#302318; --accent:#d4a44b; --text:#f4ead3; --muted:#c9b38b; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Georgia, 'Times New Roman', serif; background: radial-gradient(circle at top right, #6b4d2e 0%, var(--bg) 55%); color: var(--text); }
+      .layout { display:grid; grid-template-columns:320px 1fr; min-height:100vh; }
+      .sidebar { background: linear-gradient(180deg, rgba(49,34,23,.97) 0%, rgba(31,21,14,.97) 100%); border-right:1px solid #6b4d2e; padding:1rem; }
+      section { margin-bottom:1rem; padding:.8rem; background:rgba(71,49,31,.74); border:1px solid #876037; border-radius:8px; }
+      .button-row{ display:grid; gap:.5rem; }
+      button{ border:1px solid #9f7a4a; background:linear-gradient(180deg,#50381f 0%,#382514 100%); color:var(--text); border-radius:6px; padding:.5rem; text-align:left; cursor:pointer; width:100%; }
+      button.active{ border-color:var(--accent); box-shadow:0 0 0 2px rgba(56,189,248,.3); }
+      main { padding:1rem; }
+      canvas { border:2px solid #7c5a34; border-radius:10px; background:#2f542e; max-width:100%; display:block; }
+      .hud { list-style:none; margin:0; padding:0; display:grid; gap:.25rem; }
+      .hint,.subtitle{ color:var(--muted); }
+      .speed-toggle{ display:inline-flex; gap:.4rem; align-items:center; margin-top:.5rem; }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1>Frontier Bastion</h1>
+        <p class="subtitle">Single-file tower defence + workers prototype.</p>
+
+        <section>
+          <h2>Build</h2>
+          <div id="build-buttons" class="button-row"></div>
+          <button id="build-none" type="button">Cancel Build</button>
+        </section>
+
+        <section>
+          <h2>Workers</h2>
+          <p id="selected-station">Selected station: none</p>
+          <button id="build-worker" type="button">Build Worker (salvage:15)</button>
+        </section>
+
+        <section>
+          <h2>Wave Control</h2>
+          <button id="start-wave" type="button">Start Next Wave</button>
+          <label class="speed-toggle"><input id="fast-mode" type="checkbox" /> Fast mode x2</label>
+        </section>
+
+        <section>
+          <h2>Status</h2>
+          <ul class="hud">
+            <li id="hud-resources"></li>
+            <li id="hud-lives"></li>
+            <li id="hud-wave"></li>
+            <li id="hud-enemies"></li>
+            <li id="hud-stations"></li>
+            <li id="hud-workers"></li>
+          </ul>
+        </section>
+      </aside>
+      <main>
+        <p class="hint">Click a build option, place towers/stations, click station to select, build workers, then start waves.</p>
+        <canvas id="game" width="960" height="640" aria-label="Tower defence field"></canvas>
+      </main>
+    </div>
+
+    <script>
+      const GRID = { cols: 24, rows: 16, tileSize: 40 };
+      const RESOURCE_TYPES = ['salvage', 'wood', 'ore', 'crystal'];
+      const RESOURCE_COLORS = { salvage:'#fbbf24', wood:'#22c55e', ore:'#94a3b8', crystal:'#a78bfa' };
+      const BUILD_TYPES = {
+        arrow:{ category:'tower', name:'Arrow Tower', cost:{salvage:60}, range:130, damage:18, fireRate:1.1, color:'#7dd3fc' },
+        cannon:{ category:'tower', name:'Cannon Tower', cost:{salvage:45,wood:20,ore:25}, range:110, damage:44, fireRate:.55, color:'#f59e0b' },
+        arcane:{ category:'tower', name:'Arcane Spire', cost:{salvage:35,ore:15,crystal:30}, range:145, damage:30, fireRate:.8, color:'#a78bfa' },
+        station:{ category:'structure', name:'Worker Station', cost:{salvage:70}, color:'#34d399' }
+      };
+      const WORKER_CONFIG = { cost:{salvage:15}, speed:70, gatherDuration:1.8, carryAmount:12 };
+      const ENEMY_WAVE = { baseCount:7, healthScale:.28, speedBase:54, salvageBounty:12 };
+      const roadLayout = [[0,7],[5,7],[5,3],[11,3],[11,11],[17,11],[17,5],[23,5]];
+      const resourceNodes = [
+        {col:2,row:2,type:'wood'},{col:4,row:13,type:'wood'},{col:9,row:13,type:'ore'},
+        {col:15,row:1,type:'crystal'},{col:20,row:13,type:'ore'},{col:21,row:2,type:'crystal'}
+      ];
+
+      const tileToWorld = (col,row) => ({ x: col*GRID.tileSize + GRID.tileSize/2, y: row*GRID.tileSize + GRID.tileSize/2 });
+      function createMap() {
+        const pathPoints = roadLayout.map(([col,row]) => tileToWorld(col,row));
+        const pathTiles = new Set();
+        for (let i=0;i<roadLayout.length-1;i++) {
+          const [sx,sy] = roadLayout[i], [ex,ey] = roadLayout[i+1];
+          const xs = Math.sign(ex-sx), ys=Math.sign(ey-sy); let cx=sx, cy=sy; pathTiles.add(`${cx},${cy}`);
+          while (cx!==ex || cy!==ey) { if (cx!==ex) cx+=xs; if (cy!==ey) cy+=ys; pathTiles.add(`${cx},${cy}`); }
+        }
+        return { pathPoints, pathTiles, resourceNodes };
+      }
+      function findPath(start, goal, blockedSet) {
+        const sk = `${start.col},${start.row}`, gk=`${goal.col},${goal.row}`; if (sk===gk) return [start];
+        const q=[start], p=new Map([[sk,null]]), dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        while (q.length) {
+          const c=q.shift();
+          for (const [dx,dy] of dirs) {
+            const n={col:c.col+dx,row:c.row+dy};
+            if (n.col<0||n.col>=GRID.cols||n.row<0||n.row>=GRID.rows) continue;
+            const nk=`${n.col},${n.row}`;
+            if (blockedSet.has(nk) && nk!==gk) continue;
+            if (p.has(nk)) continue;
+            p.set(nk,`${c.col},${c.row}`);
+            if (nk===gk) { const path=[]; let cur=gk; while(cur){const [col,row]=cur.split(',').map(Number); path.push({col,row}); cur=p.get(cur);} return path.reverse(); }
+            q.push(n);
+          }
+        }
+        return [];
+      }
+
+      class Enemy {
+        constructor(pathPoints, health, speed) { this.pathPoints=pathPoints; this.health=health; this.maxHealth=health; this.speed=speed; this.pathIndex=0; this.x=pathPoints[0].x; this.y=pathPoints[0].y; this.reachedEnd=false; }
+        update(delta) { const t=this.pathPoints[this.pathIndex+1]; if (!t) { this.reachedEnd=true; return; } const dx=t.x-this.x,dy=t.y-this.y,d=Math.hypot(dx,dy); if (d<1) { this.pathIndex++; return; } const m=this.speed*delta; this.x += (dx/d)*Math.min(m,d); this.y += (dy/d)*Math.min(m,d); }
+      }
+      class Tower {
+        constructor(col,row,def){ this.col=col; this.row=row; this.x=col*GRID.tileSize+20; this.y=row*GRID.tileSize+20; this.def=def; this.cooldown=0; }
+        update(delta,enemies){ this.cooldown-=delta; if (this.cooldown>0) return null; let target=null,best=Infinity; for (const e of enemies){const d=Math.hypot(e.x-this.x,e.y-this.y); if (d<=this.def.range&&d<best){best=d;target=e;}} if(!target)return null; target.health-=this.def.damage; this.cooldown=1/this.def.fireRate; return {fromX:this.x,fromY:this.y,toX:target.x,toY:target.y,color:this.def.color}; }
+      }
+      class WorkerStation { constructor(id,col,row,def){ this.id=id; this.col=col; this.row=row; this.def=def; } }
+      class Worker {
+        constructor(station,targetNode,path){ this.homeStationId=station.id; this.col=station.col; this.row=station.row; const w=tileToWorld(this.col,this.row); this.x=w.x; this.y=w.y; this.targetNode=targetNode; this.state='to_resource'; this.path=path.slice(1); this.gatherTimer=0; this.carryType=null; this.carryAmount=0; }
+        update(delta,paths,stations){
+          if (this.state==='gathering'){ this.gatherTimer+=delta; if (this.gatherTimer>=WORKER_CONFIG.gatherDuration){ this.carryType=this.targetNode.type; this.carryAmount=WORKER_CONFIG.carryAmount; this.state='to_station'; const nearest=paths.findNearestStation({col:this.col,row:this.row},stations); if (!nearest){this.state='idle'; return null;} this.homeStationId=nearest.id; this.path=paths.findWorkerPath({col:this.col,row:this.row},{col:nearest.col,row:nearest.row}).slice(1);} return null; }
+          if (this.path.length){ const n=this.path[0], t=tileToWorld(n.col,n.row), dx=t.x-this.x, dy=t.y-this.y, d=Math.hypot(dx,dy); if (d<=2){this.x=t.x;this.y=t.y;this.col=n.col;this.row=n.row;this.path.shift();} else { const m=WORKER_CONFIG.speed*delta; this.x+=(dx/d)*Math.min(m,d); this.y+=(dy/d)*Math.min(m,d);} return null; }
+          if (this.state==='to_resource'){ this.state='gathering'; this.gatherTimer=0; return null; }
+          if (this.state==='to_station'){ const payload={type:this.carryType,amount:this.carryAmount}; this.carryType=null; this.carryAmount=0; this.state='to_resource'; this.path=paths.findWorkerPath({col:this.col,row:this.row},{col:this.targetNode.col,row:this.targetNode.row}).slice(1); return payload; }
+          return null;
+        }
+      }
+      const generateWave = (wave, pathPoints) => Array.from({length: ENEMY_WAVE.baseCount + wave*2}, (_,i)=>({ spawnDelay:i*0.9, enemy:new Enemy(pathPoints, 50*(1+wave*ENEMY_WAVE.healthScale), ENEMY_WAVE.speedBase + wave*3) }));
+
+      const state = { map:createMap(), resources:{salvage:200,wood:0,ore:0,crystal:0}, lives:15, wave:0, enemies:[], towers:[], stations:[], workers:[], spawnQueue:[], spawnTimer:0, selectedBuild:null, occupiedTowers:new Set(), occupiedStations:new Set(), hoverTile:null, projectiles:[], fastMode:false, stationCounter:0, selectedStationId:null };
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+
+      const formatCost = (cost) => Object.entries(cost).map(([t,a])=>`${t}:${a}`).join(' ');
+      const hasCost = (cost) => Object.entries(cost).every(([t,a]) => state.resources[t] >= a);
+      const spendCost = (cost) => { for (const [t,a] of Object.entries(cost)) state.resources[t] -= a; };
+      const getTileFromMouse = (e) => { const r=canvas.getBoundingClientRect(); const col=Math.floor((e.clientX-r.left)/GRID.tileSize), row=Math.floor((e.clientY-r.top)/GRID.tileSize); if (col<0||col>=GRID.cols||row<0||row>=GRID.rows) return null; return {col,row}; };
+      const findNearestResourceNode = (from) => state.map.resourceNodes.reduce((best,node)=>{ const d=Math.abs(node.col-from.col)+Math.abs(node.row-from.row); return !best||d<best.dist?{node,dist:d}:best; },null)?.node ?? null;
+      const paths = {
+        findWorkerPath: (start,goal)=>findPath(start,goal,state.map.pathTiles),
+        findNearestStation: (from,stations)=> stations.reduce((best,s)=>{ const d=Math.abs(from.col-s.col)+Math.abs(from.row-s.row); return !best||d<best.d?{s,d}:best; },null)?.s ?? null,
+      };
+
+      function updateHud() {
+        document.getElementById('selected-station').textContent = `Selected station: ${state.selectedStationId ? `#${state.selectedStationId}` : 'none'}`;
+        document.getElementById('hud-resources').textContent = `Resources: ${RESOURCE_TYPES.map((t)=>`${t}: ${state.resources[t]}`).join(' | ')}`;
+        document.getElementById('hud-lives').textContent = `Lives: ${state.lives}`;
+        document.getElementById('hud-wave').textContent = `Wave: ${state.wave}`;
+        document.getElementById('hud-enemies').textContent = `Enemies Alive: ${state.enemies.length}`;
+        document.getElementById('hud-stations').textContent = `Stations: ${state.stations.length}`;
+        document.getElementById('hud-workers').textContent = `Workers: ${state.workers.length}`;
+      }
+
+      function draw() {
+        const W=GRID.cols*GRID.tileSize,H=GRID.rows*GRID.tileSize;
+        ctx.clearRect(0,0,W,H);
+        const g=ctx.createLinearGradient(0,0,W,H); g.addColorStop(0,'#37562f'); g.addColorStop(1,'#223820'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+        ctx.strokeStyle='#927045'; ctx.lineWidth=GRID.tileSize-8; ctx.lineJoin='round'; ctx.beginPath(); state.map.pathPoints.forEach((p,i)=> i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.stroke();
+        ctx.strokeStyle='#b99462'; ctx.lineWidth=6; ctx.stroke(); ctx.lineWidth=1;
+        ctx.strokeStyle='rgba(15,23,42,.18)'; for(let c=0;c<=GRID.cols;c++){ctx.beginPath();ctx.moveTo(c*GRID.tileSize,0);ctx.lineTo(c*GRID.tileSize,H);ctx.stroke();}
+        for(let r=0;r<=GRID.rows;r++){ctx.beginPath();ctx.moveTo(0,r*GRID.tileSize);ctx.lineTo(W,r*GRID.tileSize);ctx.stroke();}
+        for (const n of state.map.resourceNodes){const x=n.col*GRID.tileSize+20,y=n.row*GRID.tileSize+20;ctx.fillStyle=RESOURCE_COLORS[n.type];ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(15,23,42,.7)';ctx.stroke();}
+        for (const t of state.towers){const x=t.col*GRID.tileSize+5,y=t.row*GRID.tileSize+5,w=30,h=30;ctx.fillStyle='#9a9284';ctx.fillRect(x,y+6,w,h-6);ctx.fillStyle=t.def.color;ctx.fillRect(x+w/2+2,y+12,7,3);ctx.strokeStyle=t.def.color;ctx.strokeRect(x,y+6,w,h-6);}
+        for (const s of state.stations){const x=s.col*GRID.tileSize+6,y=s.row*GRID.tileSize+7,w=28,h=26;ctx.fillStyle='#6f4b2c';ctx.fillRect(x,y+8,w,h-8);ctx.strokeStyle=s.def.color;ctx.lineWidth=state.selectedStationId===s.id?3:1;ctx.strokeRect(x,y+8,w,h-8);ctx.lineWidth=1;}
+        for (const w of state.workers){ctx.fillStyle=w.carryType?RESOURCE_COLORS[w.carryType]:'#e2e8f0';ctx.beginPath();ctx.arc(w.x,w.y,5,0,Math.PI*2);ctx.fill();}
+        for (const e of state.enemies){ctx.fillStyle='#7f1d1d';ctx.beginPath();ctx.arc(e.x,e.y,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(e.x,e.y,7,0,Math.PI*2);ctx.fill();const ratio=Math.max(0,e.health/e.maxHealth);ctx.fillStyle='#111827';ctx.fillRect(e.x-11,e.y-18,22,4);ctx.fillStyle='#22c55e';ctx.fillRect(e.x-11,e.y-18,22*ratio,4);}
+        for (const p of state.projectiles){ctx.strokeStyle=p.color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.fromX,p.fromY);ctx.lineTo(p.toX,p.toY);ctx.stroke();ctx.lineWidth=1;}
+        if (state.selectedBuild && state.hoverTile){const x=state.hoverTile.col*GRID.tileSize,y=state.hoverTile.row*GRID.tileSize;ctx.fillStyle='rgba(250,204,21,.22)';ctx.fillRect(x,y,40,40);ctx.strokeStyle='rgba(234,179,8,.9)';ctx.strokeRect(x+1,y+1,38,38);}
+      }
+
+      function buildButtons() {
+        const root = document.getElementById('build-buttons');
+        Object.entries(BUILD_TYPES).forEach(([key,def]) => {
+          const btn = document.createElement('button');
+          btn.type='button';
+          btn.textContent = `${def.name} (${formatCost(def.cost)})`;
+          btn.addEventListener('click', () => {
+            state.selectedBuild = key;
+            root.querySelectorAll('button').forEach((b)=>b.classList.remove('active'));
+            btn.classList.add('active');
+          });
+          root.appendChild(btn);
+        });
+      }
+
+      canvas.addEventListener('mousemove', (e) => { state.hoverTile = getTileFromMouse(e); });
+      canvas.addEventListener('click', (e) => {
+        const tile = getTileFromMouse(e); if (!tile) return;
+        if (!state.selectedBuild) {
+          const st=state.stations.find((s)=>s.col===tile.col&&s.row===tile.row); state.selectedStationId=st?st.id:null; updateHud(); return;
+        }
+        const def=BUILD_TYPES[state.selectedBuild], key=`${tile.col},${tile.row}`;
+        if (!def || !hasCost(def.cost) || state.map.pathTiles.has(key)) return;
+        if (def.category==='tower' && state.occupiedTowers.has(key)) return;
+        if (def.category!=='tower' && state.occupiedStations.has(key)) return;
+        spendCost(def.cost);
+        if (def.category==='tower'){ state.occupiedTowers.add(key); state.towers.push(new Tower(tile.col,tile.row,def)); }
+        else { state.occupiedStations.add(key); const st=new WorkerStation(++state.stationCounter,tile.col,tile.row,def); state.stations.push(st); state.selectedStationId=st.id; }
+        updateHud();
+      });
+
+      document.getElementById('build-none').addEventListener('click', () => {
+        state.selectedBuild = null;
+        document.querySelectorAll('#build-buttons button').forEach((b)=>b.classList.remove('active'));
+      });
+      document.getElementById('build-worker').addEventListener('click', () => {
+        const station=state.stations.find((s)=>s.id===state.selectedStationId); if (!station || !hasCost(WORKER_CONFIG.cost)) return;
+        const node=findNearestResourceNode({col:station.col,row:station.row}); if (!node) return;
+        const pathToNode=findPath({col:station.col,row:station.row},node,state.map.pathTiles); if (!pathToNode.length) return;
+        spendCost(WORKER_CONFIG.cost); state.workers.push(new Worker(station,node,pathToNode)); updateHud();
+      });
+      document.getElementById('start-wave').addEventListener('click', () => {
+        if (state.spawnQueue.length || state.enemies.length) return;
+        state.wave++; state.spawnQueue = generateWave(state.wave, state.map.pathPoints); state.spawnTimer = 0; updateHud();
+      });
+      document.getElementById('fast-mode').addEventListener('change', (e) => { state.fastMode = e.target.checked; });
+
+      buildButtons(); updateHud();
+      let lastTs = performance.now();
+      function tick(ts) {
+        const delta = ((ts-lastTs)/1000) * (state.fastMode ? 2 : 1); lastTs = ts;
+        state.projectiles = [];
+        if (state.spawnQueue.length) {
+          state.spawnTimer += delta;
+          while (state.spawnQueue.length && state.spawnTimer >= state.spawnQueue[0].spawnDelay) state.enemies.push(state.spawnQueue.shift().enemy);
+        }
+        state.enemies.forEach((e)=>e.update(delta));
+        state.towers.forEach((t)=>{ const shot=t.update(delta,state.enemies); if (shot) state.projectiles.push(shot); });
+        state.workers.forEach((w)=>{ const payload=w.update(delta,paths,state.stations); if (payload) state.resources[payload.type]+=payload.amount; });
+        const reached=state.enemies.filter((e)=>e.reachedEnd).length; if (reached) state.lives -= reached;
+        const before=state.enemies.length; state.enemies = state.enemies.filter((e)=>e.health>0&&!e.reachedEnd);
+        const killed = before-state.enemies.length-reached; if (killed>0) state.resources.salvage += killed*ENEMY_WAVE.salvageBounty;
+        if (state.lives<0) state.lives=0;
+        draw(); updateHud();
+        if (state.lives>0) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>
