@@ -44,15 +44,15 @@ export const BUILD_TYPES = {
   station: {
     category: 'structure',
     name: 'Worker Station',
-    cost: { salvage: 80, wood: 15 },
+    cost: { salvage: 70 },
     color: '#34d399',
   },
 };
 
 export const WORKER_CONFIG = {
-  cost: { salvage: 20 },
+  cost: { salvage: 15 },
   speed: 70,
-  gatherDuration: 2.2,
+  gatherDuration: 1.8,
   carryAmount: 12,
 };
 

@@ -4,9 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Frontier Bastion - Tower Defence Prototype</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: 'Trebuchet MS', system-ui, sans-serif;
+        background: radial-gradient(circle at top right, #6b4d2e 0%, #1c160f 55%);
+        color: #f4ead3;
+      }
+
+      .runtime-card {
+        max-width: 720px;
+        padding: 1rem 1.2rem;
+        border-radius: 10px;
+        border: 1px solid #876037;
+        background: rgba(36, 23, 14, 0.86);
+        line-height: 1.45;
+      }
+
+      .runtime-card code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="runtime-card" id="runtime-help" hidden>
+        <h2>How to run Frontier Bastion</h2>
+        <p>
+          This source <code>index.html</code> is meant to be served by Vite. Running it directly from
+          <code>file://</code> will not load React modules.
+        </p>
+        <p>
+          For development use <code>npm run dev</code>. For the single-file artifact run <code>npm run build</code>
+          then open <code>dist/index.html</code>.
+        </p>
+      </div>
+    </div>
+    <script>
+      if (window.location.protocol === 'file:') {
+        document.getElementById('runtime-help')?.removeAttribute('hidden');
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
