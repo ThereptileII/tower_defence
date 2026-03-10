@@ -36,13 +36,38 @@ class Enemy {
 }
 
 export class Tower {
-  constructor(col, row, def) {
+  constructor(col, row, def, kind = null) {
     this.col = col;
     this.row = row;
     this.x = col * GRID.tileSize + GRID.tileSize / 2;
     this.y = row * GRID.tileSize + GRID.tileSize / 2;
     this.def = def;
+    this.kind = kind;
+    this.level = 1;
     this.cooldown = 0;
+  }
+
+  get range() {
+    return this.def.range * (1 + (this.level - 1) * 0.12);
+  }
+
+  get damage() {
+    return this.def.damage * (1 + (this.level - 1) * 0.35);
+  }
+
+  get fireRate() {
+    return this.def.fireRate * (1 + (this.level - 1) * 0.1);
+  }
+
+  getUpgradeCost() {
+    const scale = 0.65 + this.level * 0.45;
+    return Object.fromEntries(
+      Object.entries(this.def.cost).map(([type, amount]) => [type, Math.ceil(amount * scale)]),
+    );
+  }
+
+  upgrade() {
+    this.level += 1;
   }
 
   update(delta, enemies) {
@@ -54,7 +79,7 @@ export class Tower {
 
     for (const enemy of enemies) {
       const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-      if (dist <= this.def.range && dist < bestDist) {
+      if (dist <= this.range && dist < bestDist) {
         bestDist = dist;
         target = enemy;
       }
@@ -62,8 +87,8 @@ export class Tower {
 
     if (!target) return null;
 
-    target.health -= this.def.damage;
-    this.cooldown = 1 / this.def.fireRate;
+    target.health -= this.damage;
+    this.cooldown = 1 / this.fireRate;
     return { fromX: this.x, fromY: this.y, toX: target.x, toY: target.y, color: this.def.color };
   }
 }
@@ -74,6 +99,7 @@ export class WorkerStation {
     this.col = col;
     this.row = row;
     this.def = def;
+    this.kind = kind;
   }
 }
 

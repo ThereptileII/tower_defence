@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BUILD_TYPES, ENEMY_WAVE, GRID, RESOURCE_TYPES, WORKER_CONFIG } from './game/config.js';
 import { createMap, findPath } from './game/map.js';
 import { Tower, Worker, WorkerStation, generateWave } from './game/entities.js';
 import { render } from './game/renderer.js';
+import salvageIcon from './assets/icons/resource-salvage.svg';
+import woodIcon from './assets/icons/resource-wood.svg';
+import oreIcon from './assets/icons/resource-ore.svg';
+import crystalIcon from './assets/icons/resource-crystal.svg';
+import arrowTowerIcon from './assets/icons/tower-arrow.svg';
+import cannonTowerIcon from './assets/icons/tower-cannon.svg';
+import arcaneTowerIcon from './assets/icons/tower-arcane.svg';
+import stationIcon from './assets/icons/structure-station.svg';
 
 const initialState = () => ({
   map: createMap(),
@@ -19,6 +27,7 @@ const initialState = () => ({
   occupiedTowers: new Set(),
   occupiedStations: new Set(),
   hoverTile: null,
+  selectedTowerTile: null,
   projectiles: [],
   fastMode: false,
   stationCounter: 0,
@@ -50,6 +59,20 @@ function formatCost(cost) {
     .join(' ');
 }
 
+const buildIcons = {
+  arrow: arrowTowerIcon,
+  cannon: cannonTowerIcon,
+  arcane: arcaneTowerIcon,
+  station: stationIcon,
+};
+
+const resourceIcons = {
+  salvage: salvageIcon,
+  wood: woodIcon,
+  ore: oreIcon,
+  crystal: crystalIcon,
+};
+
 export default function App() {
   const canvasRef = useRef(null);
   const stateRef = useRef(initialState());
@@ -68,6 +91,7 @@ export default function App() {
       workers: state.workers.length,
       selectedStationId: state.selectedStationId,
       selectedBuild: state.selectedBuild,
+      selectedTowerTile: state.selectedTowerTile,
       fastMode: state.fastMode,
       runtimeWarning: window.location.protocol === 'file:' ? 'You are running the source index.html directly. Use `npm run dev` for development or open `dist/index.html` after `npm run build` for the full single-file game.' : null,
     };
@@ -175,6 +199,25 @@ export default function App() {
     return best;
   }
 
+
+
+  function findTowerAt(tile) {
+    const state = stateRef.current;
+    return state.towers.find((tower) => tower.col === tile.col && tower.row === tile.row) || null;
+  }
+
+  function onUpgradeTower() {
+    const state = stateRef.current;
+    if (!state.selectedTowerTile) return;
+    const tower = findTowerAt(state.selectedTowerTile);
+    if (!tower) return;
+    const upgradeCost = tower.getUpgradeCost();
+    if (!hasCost(upgradeCost)) return;
+    spendCost(upgradeCost);
+    tower.upgrade();
+    setUiTick((v) => v + 1);
+  }
+
   function onCanvasClick(event) {
     const state = stateRef.current;
     const tile = getTileFromMouse(event);
@@ -182,7 +225,9 @@ export default function App() {
 
     if (!state.selectedBuild) {
       const station = state.stations.find((s) => s.col === tile.col && s.row === tile.row);
+      const tower = findTowerAt(tile);
       state.selectedStationId = station ? station.id : null;
+      state.selectedTowerTile = tower ? { col: tower.col, row: tower.row } : null;
       setUiTick((v) => v + 1);
       return;
     }
@@ -192,19 +237,20 @@ export default function App() {
     const key = `${tile.col},${tile.row}`;
     if (state.map.pathTiles.has(key)) return;
 
-    if (buildDef.category === 'tower' && state.occupiedTowers.has(key)) return;
-    if (buildDef.category !== 'tower' && state.occupiedStations.has(key)) return;
+    if (state.occupiedTowers.has(key) || state.occupiedStations.has(key)) return;
 
     spendCost(buildDef.cost);
 
     if (buildDef.category === 'tower') {
       state.occupiedTowers.add(key);
-      state.towers.push(new Tower(tile.col, tile.row, buildDef));
+      state.towers.push(new Tower(tile.col, tile.row, buildDef, state.selectedBuild));
+      state.selectedTowerTile = { col: tile.col, row: tile.row };
     } else {
       state.occupiedStations.add(key);
       const station = new WorkerStation(++state.stationCounter, tile.col, tile.row, buildDef);
       state.stations.push(station);
       state.selectedStationId = station.id;
+      state.selectedTowerTile = null;
     }
 
     setUiTick((v) => v + 1);
@@ -247,7 +293,10 @@ export default function App() {
                   setUiTick((v) => v + 1);
                 }}
               >
-                {def.name} ({formatCost(def.cost)})
+                <span className="build-button">
+                  <img src={buildIcons[key]} alt="" className="build-icon" />
+                  <span>{def.name} ({formatCost(def.cost)})</span>
+                </span>
               </button>
             ))}
           </div>
@@ -276,6 +325,21 @@ export default function App() {
             Build Worker ({formatCost(WORKER_CONFIG.cost)})
           </button>
           <p className="hint">Tip: click a station tile to select it, then build workers.</p>
+        </section>
+
+
+        <section>
+          <h2>Towers</h2>
+          <p>
+            Selected tower:{' '}
+            {uiState.selectedTowerTile
+              ? `(${uiState.selectedTowerTile.col}, ${uiState.selectedTowerTile.row})`
+              : 'none'}
+          </p>
+          <button type="button" onClick={onUpgradeTower}>
+            Upgrade Selected Tower
+          </button>
+          <p className="hint">Select a tower tile while build mode is canceled, then upgrade it.</p>
         </section>
 
         <section>
@@ -325,7 +389,14 @@ export default function App() {
         <section>
           <h2>Status</h2>
           <ul className="hud">
-            <li>Resources: {RESOURCE_TYPES.map((type) => `${type}: ${uiState.resources[type]}`).join(' | ')}</li>
+            <li className="resource-row">Resources:
+              {RESOURCE_TYPES.map((type) => (
+                <span key={type} className="resource-pill">
+                  <img src={resourceIcons[type]} alt="" className="resource-icon" />
+                  {type}: {uiState.resources[type]}
+                </span>
+              ))}
+            </li>
             <li>Lives: {uiState.lives}</li>
             <li>Wave: {uiState.wave}</li>
             <li>Enemies Alive: {uiState.enemiesAlive}</li>

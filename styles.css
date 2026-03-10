@@ -125,3 +125,36 @@ canvas {
   color: var(--muted);
   margin-top: 0.6rem;
 }
+
+.build-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.build-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.resource-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.resource-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid rgba(212, 164, 75, 0.35);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.resource-icon {
+  width: 14px;
+  height: 14px;
+}
