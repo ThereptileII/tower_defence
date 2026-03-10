@@ -2,8 +2,23 @@
 
 Browser-based tower defence prototype with lane defense plus worker logistics.
 
-## Run locally
-Open `index.html` directly in your browser. No Python or local web server is required.
+## Development workflow (Vite + React)
+
+```bash
+npm install
+npm run dev
+```
+
+This starts a Vite dev server for local iteration.
+
+## Build a single-file app (`index.html`)
+
+```bash
+npm run build
+```
+
+The build output in `dist/index.html` is a one-page artifact (JS/CSS inlined) via `vite-plugin-singlefile`.
+You can open `dist/index.html` directly in a browser from your filesystem (`file://`) without running Python or any server.
 
 ## Gameplay
 - Build towers and worker stations (stations can share tiles with towers).
