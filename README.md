@@ -13,14 +13,20 @@ This starts a Vite dev server for local iteration.
 
 > Note: project-root `index.html` is a Vite entry file, not a standalone app. If opened directly (`file://`) it now shows instructions instead of a blank screen.
 
-## Build a single-file app (`index.html`)
+## Build standalone outputs (no server)
 
 ```bash
-npm run build
+npm run build:bundle
 ```
 
-The build output in `dist/index.html` is a one-page artifact (JS/CSS inlined) via `vite-plugin-singlefile`.
-You can open `dist/index.html` directly in a browser from your filesystem (`file://`) without running Python or any server.
+This workflow does three things:
+- Builds `dist/index.html` as a single-file app (JS/CSS inlined).
+- Syncs `frontier-bastion-standalone.html` in the repo root so the one-file version stays up to date.
+- Creates `dist/download-bundle/` with:
+  - `index.html` (standalone)
+  - `assets/` (copied from `src/assets`)
+
+Everything in `dist/download-bundle/` works from `file://` with no server.
 
 ## Gameplay
 - Build towers and worker stations (stations can share tiles with towers).
@@ -33,13 +39,15 @@ See `docs/GAME_PLAN.md` for the mechanics and roadmap.
 
 ## GitHub workflow (build artifact)
 
-A CI workflow is included at `.github/workflows/build-single-file.yml`.
-On pushes and pull requests, it installs dependencies, runs `npm run build`, and uploads `dist/frontier-bastion-standalone.html` as an artifact named `frontier-bastion-standalone`.
+A CI workflow is included at `.github/workflows/build-download-bundle.yml`.
+On pushes and pull requests, it installs dependencies, runs `npm run build:bundle`, and uploads:
+- `dist/download-bundle/` as `frontier-bastion-download-bundle`
+- `frontier-bastion-standalone.html` as `frontier-bastion-standalone`
 
 ## CI standalone artifact
 
-The GitHub Action `.github/workflows/build-single-file.yml` now publishes a dedicated standalone file: `frontier-bastion-standalone.html`.
-Download that artifact from the workflow run and open it directly in the browser (`file://`).
+The GitHub Action `.github/workflows/build-download-bundle.yml` publishes both a dedicated standalone file and a download folder with assets.
+Download either artifact and open `index.html` directly in the browser (`file://`).
 
 ## Instant standalone file (no build step)
 

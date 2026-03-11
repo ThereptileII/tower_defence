@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:bundle": "npm run build && node scripts/build-download-bundle.mjs",
+    "refresh:standalone": "node scripts/build-download-bundle.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

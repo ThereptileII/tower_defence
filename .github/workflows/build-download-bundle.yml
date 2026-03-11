@@ -1,0 +1,45 @@
+name: Build standalone download bundle
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-download-bundle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build standalone and download bundle
+        run: npm run build:bundle
+
+      - name: Upload download bundle artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: frontier-bastion-download-bundle
+          path: dist/download-bundle
+          if-no-files-found: error
+
+      - name: Upload standalone html artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: frontier-bastion-standalone
+          path: frontier-bastion-standalone.html
+          if-no-files-found: error
